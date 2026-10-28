@@ -1,2 +1,2 @@
-# localmarket-microserviceslocalmarket-microservices
+# localmarket-microservices
 A learning project building a marketplace for small businesses using Python, FastAPI, and microservices architecture.
