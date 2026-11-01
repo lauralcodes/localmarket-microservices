@@ -1,17 +1,8 @@
 
-from fastapi import FastAPI
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 
+from database import get_database_connection
 
-app = FastAPI(title="LocalMarket Product Service")
-
-
-@app.get("/")
-def home():
-    return {"message": "Welcome to LocalMarket!"}
-
-
-from fastapi import FastAPI
 
 app = FastAPI(title="LocalMarket Product Service")
 
@@ -23,49 +14,38 @@ def home():
 
 @app.get("/products")
 def get_products():
-    products = [
-        {
-            "id": 1,
-            "name": "Handmade Ceramic Mug",
-            "price": 15.00,
-            "shop": "Anna's Crafts",
-        },
-        {
-            "id": 2,
-            "name": "Organic Apple Jam",
-            "price": 8.50,
-            "shop": "Local Farm Foods",
-        },
-    ]
+    connection = get_database_connection()
 
-    return {"products": products}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM products")
+            products = cursor.fetchall()
 
+        return {"products": products}
 
-from fastapi import HTTPException
+    finally:
+        connection.close()
 
 
 @app.get("/products/{product_id}")
 def get_product(product_id: int):
-    products = [
-        {
-            "id": 1,
-            "name": "Handmade Ceramic Mug",
-            "price": 15.00,
-            "shop": "Anna's Crafts",
-        },
-        {
-            "id": 2,
-            "name": "Organic Apple Jam",
-            "price": 8.50,
-            "shop": "Local Farm Foods",
-        },
-    ]
+    connection = get_database_connection()
 
-    for product in products:
-        if product["id"] == product_id:
-            return product
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM products WHERE id = %s",
+                (product_id,)
+            )
+            product = cursor.fetchone()
 
-    raise HTTPException(
-        status_code=404,
-        detail="Product not found",
-    )
+        if product is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Product not found",
+            )
+
+        return product
+
+    finally:
+        connection.close()
