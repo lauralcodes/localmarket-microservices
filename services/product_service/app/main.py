@@ -130,3 +130,33 @@ def update_product(product_id: int, product: ProductUpdate):
 
     finally:
         connection.close()        
+
+
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int):
+    connection = get_database_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM products WHERE id = %s",
+                (product_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Product is not found",
+                )
+
+            cursor.execute(
+                "DELETE FROM products WHERE id = %s",
+                (product_id,),
+            )
+
+            connection.commit()
+
+        return {"message": "Product deleted successfully"}
+
+    finally:
+        connection.close()    
