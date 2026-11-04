@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from database import get_database_connection
 from schemas import ProductCreate
 from schemas import ProductUpdate
@@ -8,17 +8,54 @@ from schemas import ProductUpdate
 app = FastAPI(title="LocalMarket Product Service")
 
 
-
 @app.get("/products")
-def get_products():
+def get_products(
+    search: str | None = None,
+    shop: str | None = None,
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
     connection = get_database_connection()
 
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM products")
+            conditions = []
+            values = []
+
+            if search:
+                conditions.append("name LIKE %s")
+                values.append(f"%{search}%")
+
+            if shop:
+                conditions.append("shop_name = %s")
+                values.append(shop)
+
+            where_clause = ""
+
+            if conditions:
+                where_clause = " WHERE " + " AND ".join(conditions)
+
+            cursor.execute(
+                "SELECT COUNT(*) AS total FROM products" + where_clause,
+                values,
+            )
+            total = cursor.fetchone()["total"]
+
+            cursor.execute(
+                "SELECT * FROM products"
+                + where_clause
+                + " ORDER BY id LIMIT %s OFFSET %s",
+                values + [limit, offset],
+            )
+
             products = cursor.fetchall()
 
-        return {"products": products}
+        return {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "products": products,
+        }
 
     finally:
         connection.close()
