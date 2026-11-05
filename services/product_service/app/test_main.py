@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
+import pymysql
 from main import app
 import pytest
+from unittest.mock import patch
+
 
 
 client = TestClient(app)
@@ -10,6 +13,23 @@ def use_test_database(monkeypatch):
         "MYSQL_DATABASE",
         "localmarket_products_test", # tests use localmarket_products_test.
     ) # After each test, pytest restores the original environment variable.
+
+
+
+def test_database_unavailable():
+    with patch( # temporarily replaces the database connection function.
+        "main.get_database_connection",
+        side_effect=pymysql.MySQLError("Database unavailable"), # raise a simulated MySQL error.
+    ):
+        response = client.get("/products")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Database service is temporarily unavailable"
+    }
+
+
+
 
 # Add a reusable test-product fixture. This fixture creates a product and gives its data to whichever test requests it.
 # Make the tests clean up after themselves
@@ -107,7 +127,7 @@ def test_create_product():
 def test_update_product(test_product):
     product_id = test_product["id"]
 
-    response = client.put(
+    response = client.patch(
         f"/products/{product_id}",
         json={"price": 45.00},
     )
@@ -115,6 +135,30 @@ def test_update_product(test_product):
     assert response.status_code == 200
     assert response.json()["price"] == 45.00
     assert response.json()["name"] == "Temporary Test Product"
+
+# Test updating a product that doesn't exist
+def test_update_product_not_found():
+    response = client.patch(
+        "/products/999999",
+        json={"price": 45.00},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Product not found"
+    }
+
+# Test rejecting invalid update data
+def test_update_product_invalid_data(test_product):
+    product_id = test_product["id"]
+
+    response = client.patch(
+        f"/products/{product_id}",
+        json={"price": -10.00},
+    )
+
+    assert response.status_code == 422
+
 
 # Test product deletion
 def test_delete_product(test_product):
