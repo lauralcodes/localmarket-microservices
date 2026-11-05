@@ -1,11 +1,25 @@
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+import pymysql
 
-from fastapi import FastAPI, HTTPException, Query
 from database import get_database_connection
-from schemas import ProductCreate
-from schemas import ProductUpdate
+from schemas import ProductCreate, ProductUpdate
 
 
 app = FastAPI(title="LocalMarket Product Service")
+
+# central exception handler - This handles PyMySQL errors, not every possible application error
+@app.exception_handler(pymysql.MySQLError)
+async def database_exception_handler(
+    request: Request,
+    exc: pymysql.MySQLError,
+):
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "Database service is temporarily unavailable" # We deliberately don't return the original database error to the client because it could reveal internal information.
+        },
+    )
 
 @app.get("/")
 def home():
@@ -124,7 +138,7 @@ def create_product(product: ProductCreate):
         connection.close()
 
 
-@app.put("/products/{product_id}")
+@app.patch("/products/{product_id}")
 def update_product(product_id: int, product: ProductUpdate):
     updates = product.model_dump(exclude_unset=True) # get only the fields that were provided in the request. if someone updates only the price, we must preserve the existing name, description and shop.
 
