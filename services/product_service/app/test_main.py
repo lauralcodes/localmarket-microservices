@@ -12,7 +12,7 @@ def test_home():
         "message": "Welcome to LocalMarket!"
     }
 
-
+# test Product listing
 def test_get_products():
     response = client.get("/products")
 
