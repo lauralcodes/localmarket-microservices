@@ -7,6 +7,10 @@ from schemas import ProductUpdate
 
 app = FastAPI(title="LocalMarket Product Service")
 
+@app.get("/")
+def home():
+    return {"message": "Welcome to LocalMarket!"}
+
 
 @app.get("/products")
 def get_products(
