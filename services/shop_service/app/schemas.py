@@ -1,4 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
+from datetime import datetime
+
 
 
 class ShopCreate(BaseModel):
@@ -52,5 +54,6 @@ class ShopResponse(BaseModel): # Defines the information returned by the API.
 
     logo_url: str | None
     cover_image_url: str | None
-    created_at: str | None = None
-    updated_at: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    
