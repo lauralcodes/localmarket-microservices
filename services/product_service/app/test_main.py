@@ -9,7 +9,7 @@ from unittest.mock import patch
 client = TestClient(app)
 @pytest.fixture(autouse=True) # pytest runs it automatically before every test.
 def use_test_database(monkeypatch):
-    monkeypatch.setenv( # temporarily changes an environment variable.
+    monkeypatch.setenv( # temporarily changes an environment variable. It automatically restores the original value afterward. It automatically restores the original value afterward.
         "MYSQL_DATABASE",
         "localmarket_products_test", # tests use localmarket_products_test.
     ) # After each test, pytest restores the original environment variable.
