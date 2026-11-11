@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
 from datetime import datetime
 
 
-
+# Create shop schema for request and response. We use Pydantic models to define the structure of the data that we expect to receive in requests and send in responses. Pydantic models provide data validation and serialization, making it easier to work with data in FastAPI applications.
 class ShopCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
     description: str | None = None
@@ -56,4 +56,20 @@ class ShopResponse(BaseModel): # Defines the information returned by the API.
     cover_image_url: str | None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+# Create the image schemas
+class ShopImageCreate(BaseModel):
+    image_url: HttpUrl
+    alt_text: str | None = Field(default=None, max_length=255)
+    display_order: int = Field(default=0, ge=0)
+
+
+class ShopImageResponse(BaseModel):
+    id: int
+    shop_id: int
+    image_url: str
+    alt_text: str | None
+    display_order: int
+    created_at: datetime | None = None
     

@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from database import get_database_connection
-from schemas import ShopCreate, ShopUpdate, ShopResponse
+from schemas import ShopCreate, ShopUpdate, ShopResponse, ShopImageCreate, ShopImageResponse
 
 
 app = FastAPI(title="LocalMarket Shop Service")
@@ -193,6 +193,139 @@ def delete_shop(shop_id: int):
         connection.commit()
 
         return {"message": "Shop deleted successfully"}
+
+    finally:
+        connection.close()
+
+
+
+# CRUD operations for shop images
+
+@app.post(
+    "/shops/{shop_id}/images",
+    response_model=ShopImageResponse,
+    status_code=201,
+)
+def add_shop_image(shop_id: int, image: ShopImageCreate):
+    connection = get_database_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # First, check that the shop exists.
+            cursor.execute(
+                "SELECT id FROM shops WHERE id = %s",
+                (shop_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Shop not found",
+                )
+
+            # Add the image to the shop's gallery.
+            cursor.execute(
+                """
+                INSERT INTO shop_images (
+                    shop_id, image_url, alt_text, display_order
+                )
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    shop_id,
+                    str(image.image_url),
+                    image.alt_text,
+                    image.display_order,
+                ),
+            )
+
+            image_id = cursor.lastrowid
+
+            # Retrieve the newly created image.
+            cursor.execute(
+                "SELECT * FROM shop_images WHERE id = %s",
+                (image_id,),
+            )
+            new_image = cursor.fetchone()
+
+        connection.commit()
+        return new_image
+
+    finally:
+        connection.close()
+
+
+@app.get(
+    "/shops/{shop_id}/images",
+    response_model=list[ShopImageResponse],
+)
+def get_shop_images(shop_id: int):
+    connection = get_database_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM shops WHERE id = %s",
+                (shop_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Shop not found",
+                )
+
+            cursor.execute(
+                """
+                SELECT * FROM shop_images
+                WHERE shop_id = %s
+                ORDER BY display_order ASC, id ASC
+                """,
+                (shop_id,),
+            )
+
+            images = cursor.fetchall()
+
+        return images
+
+    finally:
+        connection.close()
+
+
+@app.delete("/shops/{shop_id}/images/{image_id}")
+def delete_shop_image(shop_id: int, image_id: int):
+    connection = get_database_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM shops WHERE id = %s",
+                (shop_id,),
+            )
+
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Shop not found",
+                )
+
+            cursor.execute(
+                """
+                DELETE FROM shop_images
+                WHERE id = %s AND shop_id = %s
+                """,
+                (image_id, shop_id),
+            )
+
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Shop image not found",
+                )
+
+        connection.commit()
+
+        return {"message": "Shop image deleted successfully"}
 
     finally:
         connection.close()
